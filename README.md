@@ -129,7 +129,8 @@ gh run watch -R yx-token/.github "$(gh run list -R yx-token/.github -w notify.ym
              echo "::notice::未配置 NOTIFY_DISPATCH_TOKEN，跳过发版通知"
              exit 0
            fi
-           gh workflow run notify.yml -R "${GITHUB_REPOSITORY_OWNER}/.github" \
+           # 必须带 --ref：不带时 gh 会查询本仓库的默认分支，token 没有这个权限，触发失败
+           gh workflow run notify.yml -R "${GITHUB_REPOSITORY_OWNER}/.github" --ref main \
              -f title="${GITHUB_REPOSITORY#*/} ${GITHUB_REF_NAME} 发布成功" \
              -f content="**版本**：${GITHUB_REF_NAME}"$'\n'"**发布人**：${GITHUB_ACTOR}" \
              -f url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${GITHUB_REF_NAME}" \
