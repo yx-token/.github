@@ -99,10 +99,11 @@ gh run watch -R yx-token/.github "$(gh run list -R yx-token/.github -w notify.ym
 
 1. **创建触发用的 token**（整个组织共用一个即可）：打开 <https://github.com/settings/personal-access-tokens/new> 创建 fine-grained token：
    - Resource owner 选 `yx-token`；
+   - Expiration 选 No expiration（组织已关闭「细粒度 token 必须设置过期时间」的策略）；
    - Repository access 选 Only select repositories → `yx-token/.github`；
    - Permissions → Repository permissions → **Actions** 选 Read and write，其他保持默认。
 
-   这个 token 只能触发本仓库的 workflow，不能读写代码、也拿不到渠道密钥。如果组织开启了 token 审批，需要组织管理员在 Settings → Personal access tokens → Pending requests 中批准。token 过期后各项目的通知会失败，届时重新生成并更新各项目的 secret。
+   这个 token 只能触发本仓库的 workflow，不能读写代码、也拿不到渠道密钥。如果组织开启了 token 审批，需要组织管理员在 Settings → Personal access tokens → Pending requests 中批准。当前使用的 token 名为 `notify-dispatch`，永不过期；如果它被删除或重新生成，各项目的通知会失败，需要更新各项目的 secret。
 
 2. **在项目仓库中添加 Secret** `NOTIFY_DISPATCH_TOKEN`，值为上一步的 token（见[触发 token](#触发-token配置在各项目仓库)）：
 
