@@ -6,37 +6,85 @@
 
 > 为什么不用组织级 Secrets：组织是 GitHub Free 套餐，私有仓库读不到组织级 Secrets 和 Variables，所以把渠道配置集中放在本仓库，由各项目触发这里的 workflow 来发送。以后升级到 Team 套餐，可以改成组织级 Secrets 加 reusable workflow。
 
-### 配置渠道
+### 配置项一览
 
-在本仓库 Settings → Secrets and variables → Actions 中配置，**哪个渠道的必填项配齐了就启用哪个渠道**：
+配置分在两个地方：
 
-| 渠道 | 名称 | 类型 | 说明 |
+| 配置位置 | 配置内容 | 什么时候配 |
+| --- | --- | --- |
+| 本仓库 `yx-token/.github` | 通知渠道：[飞书](#飞书配置在本仓库)、[邮件](#邮件配置在本仓库) | 整个组织只配一次，所有项目共用 |
+| 各项目仓库，例如 `yx-token/token-market` | [`NOTIFY_DISPATCH_TOKEN`](#触发-token配置在各项目仓库) | 每个要发通知的项目各配一次 |
+
+两处都在仓库的 **Settings → Secrets and variables → Actions** 页面。页面上有 **Secrets** 和 **Variables** 两个标签：
+
+- 表中「类型」为 **Secret** 的，在 Secrets 标签点 New repository secret 添加。值加密保存，保存后看不到原值，日志中会被打码。
+- 表中「类型」为 **Variable** 的，在 Variables 标签点 New repository variable 添加。值明文可见，方便核对。
+- 都添加为**仓库级**（Repository secrets / Repository variables），不要加到 Environment 或组织级。组织是 Free 套餐，组织级的配置私有仓库读不到。
+- 名称和类型必须和下表完全一致。放错标签页会读不到，例如把 `SMTP_HOST` 建成了 Secret，会报「缺少 SMTP_HOST」。
+- 修改后立即生效，下一次通知就会用新配置。
+
+#### 飞书：配置在本仓库
+
+配置页面：[Secrets](https://github.com/yx-token/.github/settings/secrets/actions)
+
+| 配置项 | 类型 | 必填 | 说明 | 示例 |
+| --- | --- | --- | --- | --- |
+| `FEISHU_WEBHOOK` | Secret | 是 | 飞书群 → 设置 → 群机器人 → 添加机器人 → 自定义机器人，复制 Webhook 地址 | `https://open.feishu.cn/open-apis/bot/v2/hook/xxxx` |
+| `FEISHU_SECRET` | Secret | 否 | 机器人安全设置勾选「签名校验」时，填写页面上显示的密钥；没开签名校验就不配 | |
+
+- **启用条件**：配置了 `FEISHU_WEBHOOK`。只配了 `FEISHU_SECRET` 会按配置不完整报错。
+- 机器人安全设置不要用「IP 白名单」，因为 GitHub 托管运行器的出口 IP 不固定。用「自定义关键词」时，标题或正文里必须包含关键词，否则飞书会拒收。推荐用「签名校验」。
+
+#### 邮件：配置在本仓库
+
+配置页面：[Secrets](https://github.com/yx-token/.github/settings/secrets/actions)（`SMTP_PASSWORD`）、[Variables](https://github.com/yx-token/.github/settings/variables/actions)（其余各项）
+
+| 配置项 | 类型 | 必填 | 说明 | 示例 |
+| --- | --- | --- | --- | --- |
+| `SMTP_HOST` | Variable | 是 | SMTP 服务器地址 | `smtp.feishu.cn` |
+| `SMTP_PORT` | Variable | 否 | 默认 `465`（SSL）；其他端口使用 STARTTLS，一般是 `587`。25 端口被 GitHub 托管运行器封禁 | `465` |
+| `SMTP_USERNAME` | Variable | 是 | 发件邮箱的登录账号 | `bot@example.com` |
+| `SMTP_PASSWORD` | Secret | 是 | 发件邮箱的密码。QQ、163、飞书等邮箱需在邮箱设置中开启 SMTP，填写生成的授权码或专用密码 | |
+| `SMTP_FROM` | Variable | 否 | 发件人，默认等于 `SMTP_USERNAME`。可以加显示名称，但多数邮箱要求地址和登录账号一致 | `发版通知 <bot@example.com>` |
+| `EMAIL_TO` | Variable | 是 | 收件人，多个用逗号、分号或空格分隔 | `a@example.com,b@example.com` |
+
+- **启用条件**：上表任意一项有值，就视为要启用邮件；这时 4 个必填项缺任何一个都会报错。
+- 常用邮箱的 SMTP 服务器（端口都用 465）：飞书邮箱 `smtp.feishu.cn`、腾讯企业邮 `smtp.exmail.qq.com`、QQ 邮箱 `smtp.qq.com`、163 邮箱 `smtp.163.com`、Gmail `smtp.gmail.com`。
+
+#### 触发 token：配置在各项目仓库
+
+配置页面：`https://github.com/yx-token/<项目>/settings/secrets/actions`
+
+| 配置项 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
-| 飞书 | `FEISHU_WEBHOOK` | Secret | 必填。群设置 → 群机器人 → 添加机器人 → 自定义机器人，复制 Webhook 地址 |
-| 飞书 | `FEISHU_SECRET` | Secret | 选填。机器人安全设置选择「签名校验」时填写对应密钥 |
-| 邮件 | `SMTP_HOST` | Variable | 必填。例如 `smtp.feishu.cn`、`smtp.qq.com`、`smtp.163.com`、`smtp.exmail.qq.com` |
-| 邮件 | `SMTP_PORT` | Variable | 选填，默认 `465`（SSL）。其他端口（一般是 `587`）使用 STARTTLS |
-| 邮件 | `SMTP_USERNAME` | Variable | 必填。发件邮箱账号 |
-| 邮件 | `SMTP_PASSWORD` | Secret | 必填。密码；QQ、163 等邮箱填写客户端授权码 |
-| 邮件 | `SMTP_FROM` | Variable | 选填，默认等于 `SMTP_USERNAME`。可以写成 `发版通知 <bot@example.com>` |
-| 邮件 | `EMAIL_TO` | Variable | 必填。收件人，多个用逗号分隔 |
+| `NOTIFY_DISPATCH_TOKEN` | Secret | 否 | 用来触发本仓库 Notify workflow 的 fine-grained token，创建方法见[项目接入](#项目接入)第 1 步。所有项目可以共用同一个 token。不配置时该项目不发通知 |
 
-也可以用命令行配置（Secret 会提示粘贴，不会留在 shell 历史里）：
+#### 用命令行配置
+
+Secret 会提示粘贴值，不会留在 shell 历史里：
 
 ```bash
+# 本仓库：飞书
 gh secret set FEISHU_WEBHOOK -R yx-token/.github
-gh secret set FEISHU_SECRET -R yx-token/.github
+gh secret set FEISHU_SECRET -R yx-token/.github          # 开启了签名校验时
 
+# 本仓库：邮件
 gh variable set SMTP_HOST -R yx-token/.github --body smtp.feishu.cn
+gh variable set SMTP_PORT -R yx-token/.github --body 465  # 可省略
 gh variable set SMTP_USERNAME -R yx-token/.github --body bot@example.com
 gh secret set SMTP_PASSWORD -R yx-token/.github
+gh variable set SMTP_FROM -R yx-token/.github --body "发版通知 <bot@example.com>"  # 可省略
 gh variable set EMAIL_TO -R yx-token/.github --body "a@example.com,b@example.com"
+
+# 各项目仓库
+gh secret set NOTIFY_DISPATCH_TOKEN -R yx-token/<项目>
+
+# 查看已配置的项（Secret 只显示名称）
+gh secret list -R yx-token/.github
+gh variable list -R yx-token/.github
 ```
 
-注意：
-
-- 飞书机器人的安全设置不要用「IP 白名单」，GitHub 托管运行器的出口 IP 不固定；用「自定义关键词」时，标题或正文里必须包含关键词。
-- GitHub 托管运行器封禁了 25 端口，邮件请用 465 或 587。
+停用某个渠道时，删除该渠道的全部配置项即可，例如 `gh secret delete FEISHU_WEBHOOK -R yx-token/.github`。
 
 ### 测试
 
@@ -56,13 +104,13 @@ gh run watch -R yx-token/.github "$(gh run list -R yx-token/.github -w notify.ym
 
    这个 token 只能触发本仓库的 workflow，不能读写代码、也拿不到渠道密钥。如果组织开启了 token 审批，需要组织管理员在 Settings → Personal access tokens → Pending requests 中批准。token 过期后各项目的通知会失败，届时重新生成并更新各项目的 secret。
 
-2. **在项目中配置**该 token：
+2. **在项目仓库中添加 Secret** `NOTIFY_DISPATCH_TOKEN`，值为上一步的 token（见[触发 token](#触发-token配置在各项目仓库)）：
 
    ```bash
    gh secret set NOTIFY_DISPATCH_TOKEN -R yx-token/<项目>
    ```
 
-   没有配置 `NOTIFY_DISPATCH_TOKEN` 的项目会跳过通知。
+   没有配置这个 Secret 的项目会跳过通知。
 
 3. **在项目 workflow 中触发**，例如发版成功后（`needs` 指向发版的最后一个 job）：
 
