@@ -1,0 +1,57 @@
+# 组织通用通知：按本仓库配置的渠道（飞书机器人、邮件）发送一条消息，一个渠道都没配置时跳过。
+# 其他仓库用 NOTIFY_DISPATCH_TOKEN 触发；也可以在 Actions 页面手动运行，用来测试渠道配置。接入方式与渠道配置见 README。
+name: Notify
+run-name: ${{ inputs.source || github.actor }} · ${{ inputs.title }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      title:
+        description: 标题
+        required: true
+      content:
+        description: 正文（支持 **加粗**、[文字](链接)，邮件中转为纯文本）
+        required: false
+        default: ""
+      url:
+        description: 详情链接
+        required: false
+        default: ""
+      status:
+        description: 状态（决定飞书卡片颜色）
+        type: choice
+        options: [info, success, failure]
+        default: info
+      source:
+        description: 来源仓库，例如 yx-token/token-market
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    name: 发送通知
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+
+      # 输入只通过环境变量传给脚本，不拼进 shell 命令
+      - name: 发送
+        env:
+          NOTIFY_TITLE: ${{ inputs.title }}
+          NOTIFY_CONTENT: ${{ inputs.content }}
+          NOTIFY_URL: ${{ inputs.url }}
+          NOTIFY_STATUS: ${{ inputs.status }}
+          NOTIFY_SOURCE: ${{ inputs.source }}
+          FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
+          FEISHU_SECRET: ${{ secrets.FEISHU_SECRET }}
+          SMTP_HOST: ${{ vars.SMTP_HOST }}
+          SMTP_PORT: ${{ vars.SMTP_PORT }}
+          SMTP_USERNAME: ${{ vars.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          SMTP_FROM: ${{ vars.SMTP_FROM }}
+          EMAIL_TO: ${{ vars.EMAIL_TO }}
+        run: python3 scripts/notify.py
