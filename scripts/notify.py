@@ -163,8 +163,18 @@ def email_config(env):
 
 CHANNELS = [("飞书", feishu_config, send_feishu), ("邮件", email_config, send_email)]
 
+EMAIL_ADDRESS = re.compile(r"[^\s,;<>]+@[^\s,;<>]+")
+
+
+def mask_addresses(env, out):
+    """邮件配置是 Secret，日志只会打码整串值；发送失败的报错（例如收件人被拒）里会出现单个地址，逐个注册打码。"""
+    for name in ("SMTP_USERNAME", "SMTP_FROM", "EMAIL_TO"):
+        for addr in EMAIL_ADDRESS.findall(env.get(name, "")):
+            print(f"::add-mask::{addr}", file=out)
+
 
 def run(env, out=sys.stdout):
+    mask_addresses(env, out)
     msg = Message(
         title=env.get("NOTIFY_TITLE", "").strip(),
         content=env.get("NOTIFY_CONTENT", "").strip(),
