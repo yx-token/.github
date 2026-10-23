@@ -122,6 +122,21 @@ class EmailTest(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("SMTP_PORT", out)
 
+    def test_mask_addresses(self):
+        # 每个地址在任何输出之前注册打码
+        env = {**MESSAGE, **EMAIL, "SMTP_FROM": "通知 <from@example.com>", "SMTP_PORT": "abc"}
+        code, out = run(env)
+        self.assertEqual(code, 1)
+        lines = out.splitlines()
+        self.assertEqual(lines[:5], [
+            "::add-mask::bot@example.com",
+            "::add-mask::from@example.com",
+            "::add-mask::a@example.com",
+            "::add-mask::b@example.com",
+            "::add-mask::c@example.com",
+        ])
+        self.assertIn("::error::邮件", lines[5])
+
 
 class RunTest(unittest.TestCase):
     def test_no_channel(self):

@@ -19,6 +19,7 @@
 
 - 表中「类型」为 **Secret** 的，在 Secrets 标签点 New repository secret 添加。值加密保存，保存后看不到原值，日志中会被打码。
 - 表中「类型」为 **Variable** 的，在 Variables 标签点 New repository variable 添加。值明文可见，方便核对。
+- 本仓库是公开仓库，运行日志任何人都能看到，Variable 的值会原样打印在日志里。所以只有服务器地址、端口这类可以公开的配置用 Variable，邮箱地址都用 Secret。
 - 都添加为**仓库级**（Repository secrets / Repository variables），不要加到 Environment 或组织级。组织是 Free 套餐，组织级的配置私有仓库读不到。
 - 名称和类型必须和下表完全一致。放错标签页会读不到，例如把 `SMTP_HOST` 建成了 Secret，会报「缺少 SMTP_HOST」。
 - 修改后立即生效，下一次通知就会用新配置。
@@ -37,16 +38,16 @@
 
 #### 邮件：配置在本仓库
 
-配置页面：[Secrets](https://github.com/yx-token/.github/settings/secrets/actions)（`SMTP_PASSWORD`）、[Variables](https://github.com/yx-token/.github/settings/variables/actions)（其余各项）
+配置页面：[Secrets](https://github.com/yx-token/.github/settings/secrets/actions)（`SMTP_USERNAME`、`SMTP_PASSWORD`、`SMTP_FROM`、`EMAIL_TO`）、[Variables](https://github.com/yx-token/.github/settings/variables/actions)（`SMTP_HOST`、`SMTP_PORT`）
 
 | 配置项 | 类型 | 必填 | 说明 | 示例 |
 | --- | --- | --- | --- | --- |
 | `SMTP_HOST` | Variable | 是 | SMTP 服务器地址 | `smtp.feishu.cn` |
 | `SMTP_PORT` | Variable | 否 | 默认 `465`（SSL）；其他端口使用 STARTTLS，一般是 `587`。25 端口被 GitHub 托管运行器封禁 | `465` |
-| `SMTP_USERNAME` | Variable | 是 | 发件邮箱的登录账号 | `bot@example.com` |
+| `SMTP_USERNAME` | Secret | 是 | 发件邮箱的登录账号 | `bot@example.com` |
 | `SMTP_PASSWORD` | Secret | 是 | 发件邮箱的密码。QQ、163、飞书等邮箱需在邮箱设置中开启 SMTP，填写生成的授权码或专用密码 | |
-| `SMTP_FROM` | Variable | 否 | 发件人，默认等于 `SMTP_USERNAME`。可以加显示名称，但多数邮箱要求地址和登录账号一致 | `发版通知 <bot@example.com>` |
-| `EMAIL_TO` | Variable | 是 | 收件人，多个用逗号、分号或空格分隔 | `a@example.com,b@example.com` |
+| `SMTP_FROM` | Secret | 否 | 发件人，默认等于 `SMTP_USERNAME`。可以加显示名称，但多数邮箱要求地址和登录账号一致 | `发版通知 <bot@example.com>` |
+| `EMAIL_TO` | Secret | 是 | 收件人，多个用逗号、分号或空格分隔 | `a@example.com,b@example.com` |
 
 - **启用条件**：上表任意一项有值，就视为要启用邮件；这时 4 个必填项缺任何一个都会报错。
 - 常用邮箱的 SMTP 服务器（端口都用 465）：飞书邮箱 `smtp.feishu.cn`、腾讯企业邮 `smtp.exmail.qq.com`、QQ 邮箱 `smtp.qq.com`、163 邮箱 `smtp.163.com`、Gmail `smtp.gmail.com`。
@@ -71,10 +72,10 @@ gh secret set FEISHU_SECRET -R yx-token/.github          # 开启了签名校验
 # 本仓库：邮件
 gh variable set SMTP_HOST -R yx-token/.github --body smtp.feishu.cn
 gh variable set SMTP_PORT -R yx-token/.github --body 465  # 可省略
-gh variable set SMTP_USERNAME -R yx-token/.github --body bot@example.com
+gh secret set SMTP_USERNAME -R yx-token/.github
 gh secret set SMTP_PASSWORD -R yx-token/.github
-gh variable set SMTP_FROM -R yx-token/.github --body "发版通知 <bot@example.com>"  # 可省略
-gh variable set EMAIL_TO -R yx-token/.github --body "a@example.com,b@example.com"
+gh secret set SMTP_FROM -R yx-token/.github              # 可省略
+gh secret set EMAIL_TO -R yx-token/.github
 
 # 各项目仓库
 gh secret set NOTIFY_DISPATCH_TOKEN -R yx-token/<项目>
